@@ -1,0 +1,33 @@
+name: algo_wallet_kms
+description: A secure KMS wallet for Flutter
+publish_to: 'none'
+version: 0.5.0
+homepage: blockshake.io
+
+environment:
+  sdk: ">=2.16.1 <3.0.0"
+  flutter: ">=1.17.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # verified libraries
+  crypto: 3.0.2
+
+  # unverified libraries
+  algorand_dart: ^2.0.0-dev.11
+
+  cryptography: 2.5.0
+
+  biometric_storage:
+    git:
+      url: git@github.com:blockshake-io/biometric_storage.git
+      ref: 5bcf68854085a636df764073b0538ae8881f4082
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^1.0.0
+
+flutter:
