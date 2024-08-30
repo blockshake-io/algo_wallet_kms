@@ -1,10 +1,6 @@
 import 'dart:async';
 
-import 'package:algo_wallet_kms/src/exceptions/biometrics_not_available_exception.dart';
-import 'package:algo_wallet_kms/src/exceptions/private_key_not_set_exception.dart';
-import 'package:algo_wallet_kms/src/models/account_config.dart';
-import 'package:algo_wallet_kms/src/secure_wallet_config.dart';
-import 'package:biometric_storage/biometric_storage.dart';
+import 'package:algo_wallet_kms/algo_wallet_kms.dart';
 import 'package:crypto/crypto.dart';
 
 /// Interface to the platform's secure storage system
@@ -22,7 +18,7 @@ class SecureStorage {
                 _defaultKeyAlgoSecureWalletAccountPrivateKeyPrefix;
 
   /// Checks if the platform supports biometric access control
-  Future<CanAuthenticateResponse> canBiometricsAuthenticate() =>
+  Future<CanAuthenticateResponse> canBiometricAuthenticate() =>
       BiometricStorage().canAuthenticate();
 
   /// Retrieve the biometric's protected storage file for the given [key]
@@ -31,7 +27,7 @@ class SecureStorage {
     required BiometricAccessControl biometricAccessControl,
   }) async {
     if (biometricAccessControl != BiometricAccessControl.biometryNone) {
-      CanAuthenticateResponse response = await canBiometricsAuthenticate();
+      CanAuthenticateResponse response = await canBiometricAuthenticate();
       if (response != CanAuthenticateResponse.success) {
         throw BiometricsNotAvailableException(
             "Biometric authentication unsupported.");
@@ -96,8 +92,10 @@ class SecureStorage {
   /// Returns the index into the storage system for this [accountConfig] where
   /// the corresponding key material is stored.
   String _getPrivateKeyKey(AccountConfig accountConfig) {
-    String publicAddressKey =
-        sha256.convert(accountConfig.publicAddress.codeUnits).toString();
+    List<int> input = accountConfig.getAlgorandAddress().publicKey.toList();
+    input.add(accountConfig.biometricAccessControl.index);
+
+    String publicAddressKey = sha256.convert(input).toString();
     return _keyAlgoSecureWalletAccountPrivateKeyPrefix + '_' + publicAddressKey;
   }
 
@@ -111,26 +109,6 @@ class SecureStorage {
       value: privateKey,
       biometricAccessControl: accountConfig.biometricAccessControl,
     );
-  }
-
-  /// Updates biometric access control in the KMS for the given [accountConfig]
-  /// with [biometricAccessControl] .
-  Future<void> updateAccountBiometricAccessControl({
-    required AccountConfig accountConfig,
-    required BiometricAccessControl biometricAccessControl,
-  }) async {
-    String? privateKey = await getAccountPrivateKey(accountConfig);
-    if (privateKey != null) {
-      await setAccountPrivateKey(
-        accountConfig: AccountConfig(
-          publicAddress: accountConfig.publicAddress,
-          biometricAccessControl: biometricAccessControl,
-        ),
-        privateKey: privateKey,
-      );
-    } else {
-      throw PrivateKeyNotSetException("No private key set for this account");
-    }
   }
 
   /// Gets the private key for the given [accountConfig].
@@ -166,6 +144,44 @@ class SecureStorage {
       biometricAccessControl: biometricAccessControl,
     );
     await biometricStorageFile.delete();
+  }
+
+  /// Checks if an account is already present
+  Future<bool> isAccountPresent(AccountConfig accountConfig) async {
+    AccountConfig accountConfigBiometryNone = AccountConfig(
+      publicAddress: accountConfig.publicAddress,
+      biometricAccessControl: BiometricAccessControl.biometryNone,
+    );
+
+    String? privateKeyBiometryNone =
+        await getAccountPrivateKey(accountConfigBiometryNone);
+    if (privateKeyBiometryNone != null) {
+      throw AccountDuplicateException();
+    }
+
+    AccountConfig accountConfigBiometryAny = AccountConfig(
+      publicAddress: accountConfig.publicAddress,
+      biometricAccessControl: BiometricAccessControl.biometryAny,
+    );
+
+    String? privateKeyBiometryAny =
+        await getAccountPrivateKey(accountConfigBiometryAny);
+    if (privateKeyBiometryAny != null) {
+      throw AccountDuplicateException();
+    }
+
+    AccountConfig accountConfigBiometryCurrentSet = AccountConfig(
+      publicAddress: accountConfig.publicAddress,
+      biometricAccessControl: BiometricAccessControl.biometryCurrentSet,
+    );
+
+    String? privateKeyCurrentSet =
+        await getAccountPrivateKey(accountConfigBiometryCurrentSet);
+    if (privateKeyCurrentSet != null) {
+      throw AccountDuplicateException();
+    }
+
+    return false;
   }
 
   /// Returns a prompt that is shown to the user by the OS when the code tries

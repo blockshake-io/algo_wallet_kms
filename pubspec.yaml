@@ -20,10 +20,10 @@ dependencies:
 
   cryptography: 2.5.0
 
-  biometric_storage:
+  secure_storage:
     git:
-      url: git@github.com:blockshake-io/biometric_storage.git
-      ref: 5bcf68854085a636df764073b0538ae8881f4082
+      url: git@github.com:blockshake-io/secure_storage.git
+      ref: main
 
 dev_dependencies:
   flutter_test:

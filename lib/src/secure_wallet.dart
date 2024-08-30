@@ -5,8 +5,8 @@ import 'package:algo_wallet_kms/src/secure_wallet_config.dart';
 import 'package:algo_wallet_kms/src/storage/secure_storage.dart';
 import 'package:algo_wallet_kms/src/utils/crypto_util.dart';
 import 'package:algorand_dart/algorand_dart.dart';
-import 'package:biometric_storage/biometric_storage.dart';
 import 'package:convert/convert.dart';
+import 'package:secure_storage/secure_storage.dart';
 
 /// A basic key-management system (KMS) for mobile & web wallets
 ///
@@ -25,7 +25,7 @@ class SecureWallet {
   /// This method stores the [account]'s key material along with metadata in
   /// the platform's native secure storage. How the [account] is stored depends
   /// on the platform's secure storage system. Mobile platforms that support
-  /// biometrics use [biometricsAccessControl] to specify which biometric
+  /// biometrics use [biometricAccessControl] to specify which biometric
   /// can be used to retrieve the key material. Web platforms that do not
   /// support native secure storage systems, the [encryptionKey] can be used to
   /// encrypt the key material with AES before storing it.
@@ -34,19 +34,15 @@ class SecureWallet {
   /// stored.
   Future<AccountConfig> addAccount({
     required Account account,
-    required BiometricAccessControl biometricsAccessControl,
+    required BiometricAccessControl biometricAccessControl,
     String? encryptionKey,
   }) async {
     AccountConfig accountConfig = AccountConfig(
       publicAddress: account.publicAddress,
-      biometricAccessControl: biometricsAccessControl,
+      biometricAccessControl: biometricAccessControl,
     );
 
-    String? privateKey =
-        await _secureStorageManager.getAccountPrivateKey(accountConfig);
-    if (privateKey != null) {
-      throw AccountDuplicateException();
-    }
+    await _secureStorageManager.isAccountPresent(accountConfig);
 
     await _setPrivateKeyFromAccount(
       accountConfig: accountConfig,
@@ -224,26 +220,31 @@ class SecureWallet {
   /// Updates the biometric access control for an [accountConfig]
   ///
   /// Fails with an [WalletException] if no private key is set for this account.
-  Future<void> updateAccountBiometricsAccessControl({
+  Future<AccountConfig> updateAccountBiometricAccessControl({
     required AccountConfig accountConfig,
     required BiometricAccessControl biometricAccessControl,
+    required String? encryptionKey,
     String? promptTitle,
   }) async {
-    String? privateKey = await _secureStorageManager.getAccountPrivateKey(
-      accountConfig,
-      promptTitle: promptTitle,
+    Account account = await _getAccount(
+      accountConfig: accountConfig,
+      encryptionKey: encryptionKey,
     );
-    if (privateKey == null) {
-      throw WalletException('Private key not set for account.');
-    }
 
-    await _secureStorageManager.setAccountPrivateKey(
-      accountConfig: AccountConfig(
-        publicAddress: accountConfig.publicAddress,
-        biometricAccessControl: biometricAccessControl,
-      ),
-      privateKey: privateKey,
+    AccountConfig updatedAccountConfig = AccountConfig(
+      publicAddress: accountConfig.publicAddress,
+      biometricAccessControl: biometricAccessControl,
     );
+
+    await _setPrivateKeyFromAccount(
+      accountConfig: updatedAccountConfig,
+      account: account,
+      encryptionKey: encryptionKey,
+    );
+
+    await removeAccount(accountConfig);
+
+    return updatedAccountConfig;
   }
 
   /// Stores an [accountConfig] and its key material in [account] in the KMS.
@@ -267,8 +268,8 @@ class SecureWallet {
   }
 
   /// Checks if the platform supports biometric access control
-  Future<bool> canBiometricsAuthenticate() async {
-    final response = await _secureStorageManager.canBiometricsAuthenticate();
+  Future<bool> canBiometricAuthenticate() async {
+    final response = await _secureStorageManager.canBiometricAuthenticate();
     return response == CanAuthenticateResponse.success;
   }
 }

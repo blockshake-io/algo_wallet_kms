@@ -1,6 +1,6 @@
 import 'package:algorand_dart/algorand_dart.dart';
-import 'package:biometric_storage/biometric_storage.dart';
 import 'package:crypto/crypto.dart';
+import 'package:secure_storage/secure_storage.dart';
 
 /// An [AccountConfig] represents a public account address without its
 /// private key material.

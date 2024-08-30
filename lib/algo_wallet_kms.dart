@@ -4,11 +4,12 @@
 /// platforms (Android, iOS, and web).
 library algo_wallet_kms;
 
+export 'package:secure_storage/secure_storage.dart';
+
 export 'src/exceptions/account_duplicate_exception.dart';
 export 'src/exceptions/biometrics_not_available_exception.dart';
 export 'src/exceptions/private_key_not_set_exception.dart';
 export 'src/exceptions/wallet_exception.dart';
-
 export 'src/models/account_config.dart';
 export 'src/secure_wallet.dart';
 export 'src/secure_wallet_config.dart';
