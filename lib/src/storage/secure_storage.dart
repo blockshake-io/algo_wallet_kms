@@ -148,37 +148,18 @@ class SecureStorage {
 
   /// Checks if an account is already present
   Future<bool> isAccountPresent(AccountConfig accountConfig) async {
-    AccountConfig accountConfigBiometryNone = AccountConfig(
-      publicAddress: accountConfig.publicAddress,
-      biometricAccessControl: BiometricAccessControl.biometryNone,
-    );
-
-    String? privateKeyBiometryNone =
-        await getAccountPrivateKey(accountConfigBiometryNone);
-    if (privateKeyBiometryNone != null) {
-      throw AccountDuplicateException();
-    }
-
-    AccountConfig accountConfigBiometryAny = AccountConfig(
-      publicAddress: accountConfig.publicAddress,
-      biometricAccessControl: BiometricAccessControl.biometryAny,
-    );
-
-    String? privateKeyBiometryAny =
-        await getAccountPrivateKey(accountConfigBiometryAny);
-    if (privateKeyBiometryAny != null) {
-      throw AccountDuplicateException();
-    }
-
-    AccountConfig accountConfigBiometryCurrentSet = AccountConfig(
-      publicAddress: accountConfig.publicAddress,
-      biometricAccessControl: BiometricAccessControl.biometryCurrentSet,
-    );
-
-    String? privateKeyCurrentSet =
-        await getAccountPrivateKey(accountConfigBiometryCurrentSet);
-    if (privateKeyCurrentSet != null) {
-      throw AccountDuplicateException();
+    for (final accessControl in [
+      BiometricAccessControl.biometryNone,
+      BiometricAccessControl.biometryAny,
+      BiometricAccessControl.biometryCurrentSet,
+    ]) {
+      final privateKey = await getAccountPrivateKey(AccountConfig(
+        publicAddress: accountConfig.publicAddress,
+        biometricAccessControl: accessControl,
+      ));
+      if (privateKey != null) {
+        throw AccountDuplicateException();
+      }
     }
 
     return false;
